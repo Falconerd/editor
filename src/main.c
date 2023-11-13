@@ -127,6 +127,19 @@ usize next_buffer_index() {
     return index;
 }
 
+void populate_line_lengths() {
+    s8 llstr = {text_buffers[current_text_buffer], current_buffer_len};
+    for (usize i = 1; i <= line_count; i += 1) {
+        // FIXME: This is super stupid as we check on every line.
+        if (i == line_count) {
+            line_lengths[i] = string_count_until(llstr, 0) + 1;
+        } else {
+            line_lengths[i] = string_count_until(llstr, '\n') + 1;
+        }
+        llstr.data += line_lengths[i];
+    }
+}
+
 void insert(u8 c, usize index) {
     usize from_buffer = current_text_buffer;
     usize to_buffer = next_buffer_index();
@@ -153,18 +166,14 @@ void delete(usize index) {
 }
 
 void linebreak(usize index) {
-    // TODO
-    // usize from_buffer = current_text_buffer;
-    // usize to_buffer = next_buffer_index();
-
-    // mem_copy(text_buffers[to_buffer], text_buffers[from_buffer], index);
-    // text_buffers[to_buffer][index] = c;
-    // mem_copy(&text_buffers[to_buffer][index + 1], &text_buffers[from_buffer][index], current_buffer_len + 1 - index);
-    // current_buffer_len += 1;
-    // current_text_buffer = to_buffer;
-
-    // cursor_col += 1;
-    // line_lengths[cursor_line] += 1;
+    // TODO: Make this smarter.
+    // Insert the '\n' character.
+    insert('\n', index);
+    // Re-count the line-lengths.
+    populate_line_lengths();
+    // Move down 1 line.
+    cursor_line += 1;
+    cursor_col = 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -236,20 +245,7 @@ int main(int argc, char *argv[]) {
     current_buffer_len = fr.str.len;
 
     line_count = string_line_count(fr.str) + 1;
-    s8 llstr = {fr.str.data, fr.str.len};
-    for (usize i = 1; i <= line_count; i += 1) {
-        // FIXME: This is super stupid as we check on every line.
-        if (i == line_count) {
-            line_lengths[i] = string_count_until(llstr, 0) + 1;
-        } else {
-            line_lengths[i] = string_count_until(llstr, '\n') + 1;
-        }
-        llstr.data += line_lengths[i];
-    }
-    for (usize i = 1; i <= line_count; i += 1) {
-        printf("line %zu -> %zu\n", i, line_lengths[i]);
-    }
-    printf("line_count: %zu\n_", line_count);
+    populate_line_lengths();
     
     TSTree *tree = ts_parser_parse_string(parser, NULL, (const char *)fr.str.data, fr.str.len);
 
