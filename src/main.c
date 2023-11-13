@@ -119,22 +119,52 @@ void cursor_move(Cursor_Movement m) {
     printf("char: %c\n", char_at_cursor());
 }
 
-void insert(u8 c, usize index) {
-    printf("INSERT: '%c'\n", c);
-    usize from_buffer = current_text_buffer;
-    usize to_buffer = current_text_buffer + 1;
-    if (to_buffer == TEXT_BUFFER_COUNT) {
-        to_buffer = 0;
+usize next_buffer_index() {
+    usize index = current_text_buffer + 1;
+    if (index == TEXT_BUFFER_COUNT) {
+        index = 0;
     }
+    return index;
+}
+
+void insert(u8 c, usize index) {
+    usize from_buffer = current_text_buffer;
+    usize to_buffer = next_buffer_index();
 
     mem_copy(text_buffers[to_buffer], text_buffers[from_buffer], index);
     text_buffers[to_buffer][index] = c;
-    mem_copy(&text_buffers[to_buffer][index + 1], &text_buffers[from_buffer][index], current_buffer_len + 1);
+    mem_copy(&text_buffers[to_buffer][index + 1], &text_buffers[from_buffer][index], current_buffer_len + 1 - index);
     current_buffer_len += 1;
     current_text_buffer = to_buffer;
 
     cursor_col += 1;
     line_lengths[cursor_line] += 1;
+}
+
+void delete(usize index) {
+    printf("delet from index: %zu\n", index);
+    usize to_buffer = next_buffer_index();
+    mem_copy(text_buffers[to_buffer], text_buffers[current_text_buffer], index);
+    mem_copy(&text_buffers[to_buffer][index - 1], &text_buffers[current_text_buffer][index], current_buffer_len - index);
+    current_buffer_len -= 1;
+    current_text_buffer = to_buffer;
+    cursor_col -= 1;
+    line_lengths[cursor_line] -= 1;
+}
+
+void linebreak(usize index) {
+    // TODO
+    // usize from_buffer = current_text_buffer;
+    // usize to_buffer = next_buffer_index();
+
+    // mem_copy(text_buffers[to_buffer], text_buffers[from_buffer], index);
+    // text_buffers[to_buffer][index] = c;
+    // mem_copy(&text_buffers[to_buffer][index + 1], &text_buffers[from_buffer][index], current_buffer_len + 1 - index);
+    // current_buffer_len += 1;
+    // current_text_buffer = to_buffer;
+
+    // cursor_col += 1;
+    // line_lengths[cursor_line] += 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -254,6 +284,10 @@ int main(int argc, char *argv[]) {
                 if (mode == MODE_INSERT) {
                     if (event.key.keysym.sym == SDLK_ESCAPE) {
                         mode = MODE_NORMAL;
+                    } else if (event.key.keysym.sym == SDLK_BACKSPACE) {
+                        delete(cursor_index());
+                    } else if (event.key.keysym.sym == SDLK_RETURN) {
+                        linebreak(cursor_index());
                     }
                 } else {
                     switch (event.key.keysym.sym) {
