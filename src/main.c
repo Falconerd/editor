@@ -1,4 +1,5 @@
 #include "common.h"
+#include <SDL2/SDL_keycode.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,7 @@
 #include "draw.c"
 
 // TODO: Put somewhere?
+b32 ctrl_q_pressed = 0;
 v3 PADDING = {4, 36, 0};
 TSParser *parser = 0;
 TSTree *tree = 0;
@@ -369,7 +371,7 @@ int main(int argc, char *argv[]) {
 
         draw_frame();
 
-        while (SDL_WaitEvent(&event)) {
+        while (SDL_WaitEvent(&event) && app_should_run) {
             switch (event.type) {
             case SDL_QUIT:
                 app_should_run = 0;
@@ -382,7 +384,20 @@ int main(int argc, char *argv[]) {
                     break;
                 }
                 break;
+            case SDL_KEYUP:
+                if (event.key.keysym.sym == SDLK_LCTRL || event.key.keysym.sym == SDLK_RCTRL) {
+                    ctrl_q_pressed = 0;
+                }
+                break;
             case SDL_KEYDOWN:
+                if (event.key.keysym.sym == SDLK_q && (event.key.keysym.mod & KMOD_CTRL) > 0) {
+                    if (ctrl_q_pressed) {
+                        app_should_run = 0;
+                    } else {
+                        ctrl_q_pressed = 1;
+                    }
+                    break;
+                }
                 if (mode == MODE_INSERT) {
                     if (event.key.keysym.sym == SDLK_ESCAPE) {
                         mode = MODE_NORMAL;
