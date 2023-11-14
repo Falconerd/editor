@@ -19,6 +19,9 @@
 #include "os.c"
 #include "draw.c"
 
+// TODO: Put somewhere?
+v3 PADDING = {4, 36, 0};
+
 typedef enum Mode {
     MODE_NORMAL,
     MODE_INSERT,
@@ -55,14 +58,15 @@ TSLanguage *tree_sitter_c();
 
 usize cursor_index() {
     usize pos = 0;
-    for (usize i = 1; i <= line_lengths[i]; i += 1) {
-        if (i == cursor_line) {
-            break;
-        }
+    for (usize i = 1; i < cursor_line; i += 1) {
         pos += line_lengths[i];
     }
     pos += cursor_col - 1;
     return pos;
+}
+
+u8 char_at(usize index) {
+    return text_buffers[current_text_buffer][index];
 }
 
 u8 char_at_cursor() {
@@ -116,7 +120,6 @@ void cursor_move(Cursor_Movement m) {
         }
     } break;
     }
-    printf("char: %c\n", char_at_cursor());
 }
 
 usize next_buffer_index() {
@@ -129,6 +132,7 @@ usize next_buffer_index() {
 
 void populate_line_lengths() {
     s8 llstr = {text_buffers[current_text_buffer], current_buffer_len};
+    line_count = string_line_count(llstr) + 1;
     for (usize i = 1; i <= line_count; i += 1) {
         // FIXME: This is super stupid as we check on every line.
         if (i == line_count) {
@@ -157,12 +161,25 @@ void insert(u8 c, usize index) {
 void delete(usize index) {
     printf("delet from index: %zu\n", index);
     usize to_buffer = next_buffer_index();
-    mem_copy(text_buffers[to_buffer], text_buffers[current_text_buffer], index);
-    mem_copy(&text_buffers[to_buffer][index - 1], &text_buffers[current_text_buffer][index], current_buffer_len - index);
-    current_buffer_len -= 1;
-    current_text_buffer = to_buffer;
-    cursor_col -= 1;
-    line_lengths[cursor_line] -= 1;
+    // Special case if deleting \n!
+    if (char_at(cursor_index() - 1) == '\n') {
+        printf("YUES\n");
+        mem_copy(text_buffers[to_buffer], text_buffers[current_text_buffer], index);
+        mem_copy(&text_buffers[to_buffer][index - 1], &text_buffers[current_text_buffer][index], current_buffer_len - index);
+        current_buffer_len -= 1;
+        // Move cursor to end of previous line...
+        cursor_line -= 1;
+        populate_line_lengths();
+        cursor_col = line_lengths[cursor_line];
+        current_text_buffer = to_buffer;
+    } else {
+        mem_copy(text_buffers[to_buffer], text_buffers[current_text_buffer], index);
+        mem_copy(&text_buffers[to_buffer][index - 1], &text_buffers[current_text_buffer][index], current_buffer_len - index);
+        current_buffer_len -= 1;
+        current_text_buffer = to_buffer;
+        cursor_col -= 1;
+        line_lengths[cursor_line] -= 1;
+    }
 }
 
 void linebreak(usize index) {
@@ -244,7 +261,6 @@ int main(int argc, char *argv[]) {
     }
     current_buffer_len = fr.str.len;
 
-    line_count = string_line_count(fr.str) + 1;
     populate_line_lengths();
     
     TSTree *tree = ts_parser_parse_string(parser, NULL, (const char *)fr.str.data, fr.str.len);
@@ -302,62 +318,36 @@ int main(int argc, char *argv[]) {
                     case SDLK_i:
                         mode = MODE_INSERT;
                         break;
+                    case SDLK_x:
+                        printf("char: '%c'\n", char_at_cursor());
+                        break;
                     }
                 }
                 break;
             }
         }
 
-        v3 cursor_pos = {(f32)(cursor_col - 1.f) * draw_font_texture.frame_width,
-                        (f32)(cursor_line - 1.f) * draw_font_texture.frame_height, 0};
+        v3 cursor_pos = {PADDING.x + (f32)(cursor_col - 1.f) * draw_font_texture.frame_width,
+                         PADDING.y + (f32)(cursor_line - 1.f) * draw_font_texture.frame_height, 0};
         
         
         draw_begin();
-        // for (int i = 0; i < 8; i += 1) {
-        //     f32 x = rand() % RENDER_WIDTH;
-        //     f32 y = rand() % RENDER_HEIGHT;
-        //     f32 w = rand() % 30;
-        //     f32 h = rand() % 30;
-        //     f32 r = (rand() % 100) / 100.f;
-        //     f32 g = (rand() % 100) / 100.f;
-        //     f32 b = (rand() % 100) / 100.f;
-        //     f32 a = (rand() % 100) / 100.f;
-        //     draw_rect((v3){x, y, 0}, (v2){w, h}, 0, (v4){r, g, b, a}, 0);
-
-        // }
-        // draw_rect_subtexture((v3){8, 8, 0}, (v2){8, 16}, (v4){1, 1, 1, 1}, draw_font_texture, 0, 0);
-
-        v3 starting_position = {4, 4, 0};
-        // draw_rope(&root, &starting_position, (v4){1, 1, 1, 1}, starting_position.x);
-    
-        draw_text((v3){0, 0, 0}, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){1, 1, 1, 1});
-        
+   
+        // Text
+        draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){1, 1, 1, 1});
+        // Cursor
         draw_rect(cursor_pos, cursor_size, 0, (v4){1, 1, 1, 1}, 0);
-
-        char buf[40] = {0};
+        // Status line
+        char buf[255] = {0};
         char *mode_text = "NORMAL";
         if (mode == MODE_INSERT) {
             mode_text = "INSERT";
         }
-        sprintf(buf, "%zu:%zu %zuL, %zu, %s", cursor_line, cursor_col, line_count, cursor_index(), mode_text);
+        sprintf(buf, "%zu:%zu %zuLC, %zuLL, %zu, %s", cursor_line, cursor_col, line_count, line_lengths[cursor_line], cursor_index(), mode_text);
+        draw_text((v3){0, 0, 0}, s8(buf), COLOR_WHITE);
 
-        draw_text((v3){RENDER_WIDTH - draw_font_texture.frame_width * 40, 0, 0}, s8(buf), COLOR_WHITE);
-// void draw_rect_subtexture(v3 p, v2 sz, v4 c, texture t, int col, int row) {
         draw_end();
     }
 
-    test_all();
-
     return 0;
-}
-
-void do_something_with(void *x) {
-    return;
-}
-
-void test_all(void) {
-    // s8 s = s8("Wow!");
-    // printf("s: %s. s.len: %zu\n", s.data, s.len);
-    // printf("Press <return> to continue...\n");
-    // getc(stdin);
 }

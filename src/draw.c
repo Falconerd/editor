@@ -258,7 +258,7 @@ void draw_text(v3 p, s8 s, v4 c) {
         x += t.frame_width;
         if (s.data[i] == '\n') {
             y += t.frame_height;
-            x = 0;
+            x = p.x;
         }
     }
 }
