@@ -21,6 +21,9 @@
 
 // TODO: Put somewhere?
 v3 PADDING = {4, 36, 0};
+TSParser *parser = 0;
+TSTree *tree = 0;
+TSNode root_node = {0};
 
 typedef enum Mode {
     MODE_NORMAL,
@@ -144,6 +147,12 @@ void populate_line_lengths() {
     }
 }
 
+void update_tree() {
+    ts_tree_delete(tree);
+    tree = ts_parser_parse_string(parser, NULL, (const char *)text_buffers[current_text_buffer], current_buffer_len);
+    root_node = ts_tree_root_node(tree);
+}
+
 void insert(u8 c, usize index) {
     usize from_buffer = current_text_buffer;
     usize to_buffer = next_buffer_index();
@@ -156,6 +165,8 @@ void insert(u8 c, usize index) {
 
     cursor_col += 1;
     line_lengths[cursor_line] += 1;
+
+    update_tree();
 }
 
 void delete(usize index) {
@@ -180,6 +191,7 @@ void delete(usize index) {
         cursor_col -= 1;
         line_lengths[cursor_line] -= 1;
     }
+    update_tree();
 }
 
 void linebreak(usize index) {
@@ -191,6 +203,68 @@ void linebreak(usize index) {
     // Move down 1 line.
     cursor_line += 1;
     cursor_col = 1;
+    update_tree();
+}
+
+s8 get_node_string(TSNode n) {
+    u32 start = ts_node_start_byte(n);
+    u32 end = ts_node_end_byte(n);
+    return (s8){&text_buffers[current_text_buffer][start], end - start};
+}
+
+void draw_syntax_highlighted_text(TSNode n) {
+    if (ts_node_is_null(n)) {
+        return;
+    }
+
+    TSSymbol symbol = ts_node_symbol(n);
+    TSPoint start = ts_node_start_point(n);
+    TSPoint end = ts_node_end_point(n);
+
+    const char *type = ts_node_type(n);
+    printf("Node type: %s\n", type);
+    printf("Node symbol: %d\n", symbol);
+    printf("Start: Line %u, Column %u\n", start.row, start.column);
+    printf("End: Line %u, Column %u\n", end.row, end.column);
+    char buf[100] = {0};
+    s8 node_string = get_node_string(n);
+    mem_copy(buf, node_string.data, node_string.len);
+    printf("String: %s\n", buf);
+
+        // v3 cursor_pos = {PADDING.x + (f32)(cursor_col - 1.f) * draw_font_texture.frame_width,
+        //                  PADDING.y + (f32)(cursor_line - 1.f) * draw_font_texture.frame_height, 0};
+    v3 text_pos = {
+        PADDING.x + (f32)start.column * draw_font_texture.frame_width,
+        PADDING.y + (f32)start.row * draw_font_texture.frame_height,
+        0
+    };
+
+    switch (symbol) {
+    case 1: // identifier
+        draw_text(text_pos, node_string, (v4){1, 1, 0, 1});
+        break;
+    case 89: // primitive_type
+        draw_text(text_pos, node_string, (v4){1, 0, 0, 1});
+        break;
+    case 102: // return
+        draw_text(text_pos, node_string, (v4){0, 0, 1, 1});
+        break;
+    case 135: // number_literal
+        draw_text(text_pos, node_string, (v4){0, 1, 0, 1});
+        break;
+    case 155: // translation unit
+        printf("======================\n");
+        break;
+    default:
+        break;
+    }
+
+    u32 child_count = ts_node_child_count(n);
+
+    for (u32 i = 0; i < child_count; i += 1) {
+        TSNode c = ts_node_child(n, i);
+        draw_syntax_highlighted_text(c);
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -208,7 +282,7 @@ int main(int argc, char *argv[]) {
         text_buffers[i] = buf;
     }
 
-    TSParser *parser = ts_parser_new();
+    parser = ts_parser_new();
     ts_parser_set_language(parser, tree_sitter_c());
 
     pool test_pool;
@@ -263,16 +337,8 @@ int main(int argc, char *argv[]) {
 
     populate_line_lengths();
     
-    TSTree *tree = ts_parser_parse_string(parser, NULL, (const char *)fr.str.data, fr.str.len);
-
-    TSNode root_node = ts_tree_root_node(tree);
-
-    char *string = ts_node_string(root_node);
-    // printf("%s\n", string);
-    free(string);
-
-    ts_tree_delete(tree);
-    ts_parser_delete(parser);
+    tree = ts_parser_parse_string(parser, NULL, (const char *)fr.str.data, fr.str.len);
+    root_node = ts_tree_root_node(tree);
 
     v2 cursor_size = {draw_font_texture.frame_width, draw_font_texture.frame_height};
 
@@ -321,6 +387,9 @@ int main(int argc, char *argv[]) {
                     case SDLK_x:
                         printf("char: '%c'\n", char_at_cursor());
                         break;
+                    case SDLK_t:
+                        root_node = ts_tree_root_node(tree);
+                        break;
                     }
                 }
                 break;
@@ -335,6 +404,7 @@ int main(int argc, char *argv[]) {
    
         // Text
         draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){1, 1, 1, 1});
+        draw_syntax_highlighted_text(root_node);
         // Cursor
         draw_rect(cursor_pos, cursor_size, 0, (v4){1, 1, 1, 1}, 0);
         // Status line
