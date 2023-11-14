@@ -170,11 +170,9 @@ void insert(u8 c, usize index) {
 }
 
 void delete(usize index) {
-    printf("delet from index: %zu\n", index);
     usize to_buffer = next_buffer_index();
     // Special case if deleting \n!
     if (char_at(cursor_index() - 1) == '\n') {
-        printf("YUES\n");
         mem_copy(text_buffers[to_buffer], text_buffers[current_text_buffer], index);
         mem_copy(&text_buffers[to_buffer][index - 1], &text_buffers[current_text_buffer][index], current_buffer_len - index);
         current_buffer_len -= 1;
@@ -222,14 +220,14 @@ void draw_syntax_highlighted_text(TSNode n) {
     TSPoint end = ts_node_end_point(n);
 
     const char *type = ts_node_type(n);
-    printf("Node type: %s\n", type);
-    printf("Node symbol: %d\n", symbol);
-    printf("Start: Line %u, Column %u\n", start.row, start.column);
-    printf("End: Line %u, Column %u\n", end.row, end.column);
-    char buf[100] = {0};
+    // printf("Node type: %s\n", type);
+    // printf("Node symbol: %d\n", symbol);
+    // printf("Start: Line %u, Column %u\n", start.row, start.column);
+    // printf("End: Line %u, Column %u\n", end.row, end.column);
+    // char buf[100] = {0};
     s8 node_string = get_node_string(n);
-    mem_copy(buf, node_string.data, node_string.len);
-    printf("String: %s\n", buf);
+    // mem_copy(buf, node_string.data, node_string.len);
+    // printf("String: %s\n", buf);
 
         // v3 cursor_pos = {PADDING.x + (f32)(cursor_col - 1.f) * draw_font_texture.frame_width,
         //                  PADDING.y + (f32)(cursor_line - 1.f) * draw_font_texture.frame_height, 0};
@@ -253,7 +251,7 @@ void draw_syntax_highlighted_text(TSNode n) {
         draw_text(text_pos, node_string, (v4){0, 1, 0, 1});
         break;
     case 155: // translation unit
-        printf("======================\n");
+        // printf("======================\n");
         break;
     default:
         break;
@@ -265,6 +263,31 @@ void draw_syntax_highlighted_text(TSNode n) {
         TSNode c = ts_node_child(n, i);
         draw_syntax_highlighted_text(c);
     }
+}
+
+void draw_frame(void) {
+    v3 cursor_pos = {PADDING.x + (f32)(cursor_col - 1.f) * draw_font_texture.frame_width,
+                     PADDING.y + (f32)(cursor_line - 1.f) * draw_font_texture.frame_height, 0};
+    
+    draw_begin();
+
+    // Text
+    draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){1, 1, 1, 1});
+    draw_syntax_highlighted_text(root_node);
+    // Cursor
+
+    v2 cursor_size = {draw_font_texture.frame_width, draw_font_texture.frame_height};
+    draw_rect(cursor_pos, cursor_size, 0, (v4){1, 1, 1, 1}, 0);
+    // Status line
+    char buf[255] = {0};
+    char *mode_text = "NORMAL";
+    if (mode == MODE_INSERT) {
+        mode_text = "INSERT";
+    }
+    sprintf(buf, "%zu:%zu %zuLC, %zuLL, %zu, %s", cursor_line, cursor_col, line_count, line_lengths[cursor_line], cursor_index(), mode_text);
+    draw_text((v3){0, 0, 0}, s8(buf), COLOR_WHITE);
+
+    draw_end();
 }
 
 int main(int argc, char *argv[]) {
@@ -340,12 +363,13 @@ int main(int argc, char *argv[]) {
     tree = ts_parser_parse_string(parser, NULL, (const char *)fr.str.data, fr.str.len);
     root_node = ts_tree_root_node(tree);
 
-    v2 cursor_size = {draw_font_texture.frame_width, draw_font_texture.frame_height};
-
     SDL_Event event;
     while (app_should_run) {
         b32 was_in_insert = mode == MODE_INSERT;
-        while (SDL_PollEvent(&event)) {
+
+        draw_frame();
+
+        while (SDL_WaitEvent(&event)) {
             switch (event.type) {
             case SDL_QUIT:
                 app_should_run = 0;
@@ -394,29 +418,9 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             }
-        }
 
-        v3 cursor_pos = {PADDING.x + (f32)(cursor_col - 1.f) * draw_font_texture.frame_width,
-                         PADDING.y + (f32)(cursor_line - 1.f) * draw_font_texture.frame_height, 0};
-        
-        
-        draw_begin();
-   
-        // Text
-        draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){1, 1, 1, 1});
-        draw_syntax_highlighted_text(root_node);
-        // Cursor
-        draw_rect(cursor_pos, cursor_size, 0, (v4){1, 1, 1, 1}, 0);
-        // Status line
-        char buf[255] = {0};
-        char *mode_text = "NORMAL";
-        if (mode == MODE_INSERT) {
-            mode_text = "INSERT";
+            draw_frame();
         }
-        sprintf(buf, "%zu:%zu %zuLC, %zuLL, %zu, %s", cursor_line, cursor_col, line_count, line_lengths[cursor_line], cursor_index(), mode_text);
-        draw_text((v3){0, 0, 0}, s8(buf), COLOR_WHITE);
-
-        draw_end();
     }
 
     return 0;
