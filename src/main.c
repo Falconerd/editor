@@ -30,6 +30,7 @@ TSNode root_node = {0};
 typedef enum Mode {
     MODE_NORMAL,
     MODE_INSERT,
+    MODE_INSERT_BEGIN, // The first insert.
 } Mode;
 
 Mode mode = MODE_NORMAL;
@@ -156,6 +157,12 @@ void update_tree() {
 }
 
 void insert(u8 c, usize index) {
+    // Don't insert 'i'
+    if (mode == MODE_INSERT_BEGIN) {
+        mode = MODE_INSERT;
+        return;
+    }
+
     usize from_buffer = current_text_buffer;
     usize to_buffer = next_buffer_index();
 
@@ -342,9 +349,6 @@ int main(int argc, char *argv[]) {
 
     draw_init();
 
-    s8 s = s8("This is a string test.");
-
-
     file_read_result fr = os_file_read("test_file.c", &arena_permanent, &arena_scratch);
     if (!fr.ok) {
         printf("Error reading test file.\n");
@@ -356,7 +360,6 @@ int main(int argc, char *argv[]) {
         text_buffers[0][i] = fr.str.data[i];
         // FIXME: Hack to just have a 0 at the end.
         text_buffers[0][i + 1] = 0;
-        printf("copied '%c'\n", text_buffers[0][i]);
     }
     current_buffer_len = fr.str.len;
 
@@ -367,8 +370,6 @@ int main(int argc, char *argv[]) {
 
     SDL_Event event;
     while (app_should_run) {
-        b32 was_in_insert = mode == MODE_INSERT;
-
         draw_frame();
 
         while (SDL_WaitEvent(&event) && app_should_run) {
@@ -377,7 +378,7 @@ int main(int argc, char *argv[]) {
                 app_should_run = 0;
                 break;
              case SDL_TEXTINPUT:
-                if (mode == MODE_INSERT && was_in_insert) {
+                if (mode == MODE_INSERT || mode == MODE_INSERT_BEGIN) {
                     // Here, event.text.text is the input text
                     char c = event.text.text[0]; // If you just want the first character
                     insert(c, cursor_index());
@@ -421,7 +422,7 @@ int main(int argc, char *argv[]) {
                         cursor_move(CURSOR_MOVEMENT_UP);
                         break;
                     case SDLK_i:
-                        mode = MODE_INSERT;
+                        mode = MODE_INSERT_BEGIN;
                         break;
                     case SDLK_x:
                         printf("char: '%c'\n", char_at_cursor());
