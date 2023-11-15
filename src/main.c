@@ -128,6 +128,44 @@ void cursor_move(Cursor_Movement m) {
     }
 }
 
+b32 is_word_character(u8 c) {
+    return c != ' ' && c != '\t' && 
+        ((c >= 'a' && c <= 'z') ||
+         (c >= 'A' && c <= 'Z') ||
+         (c >= '0' && c <= '9'));
+}
+
+void update_cursor_position_from_index(usize index) {
+    usize line = 1;
+    usize col = 1;
+
+    for (usize i = 0; i < index && i < current_buffer_len; i += 1) {
+        if (text_buffers[current_text_buffer][i] == '\n') {
+            line += 1;
+            col = 1;
+        } else {
+            col += 1;
+        }
+    }
+
+    cursor_line = line;
+    cursor_col = col;
+}
+
+void move_cursor_to_next_word() {
+    usize index = cursor_index();
+
+    while (index < current_buffer_len && is_word_character(text_buffers[current_text_buffer][index])) {
+        index += 1;
+    }
+
+    while (index < current_buffer_len && !is_word_character(text_buffers[current_text_buffer][index])) {
+        index += 1;
+    }
+
+    update_cursor_position_from_index(index);
+}
+
 usize next_buffer_index() {
     usize index = current_text_buffer + 1;
     if (index == TEXT_BUFFER_COUNT) {
@@ -420,6 +458,9 @@ int main(int argc, char *argv[]) {
                         break;
                     case SDLK_k:
                         cursor_move(CURSOR_MOVEMENT_UP);
+                        break;
+                    case SDLK_w:
+                        move_cursor_to_next_word();
                         break;
                     case SDLK_i:
                         mode = MODE_INSERT_BEGIN;
