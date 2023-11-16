@@ -31,6 +31,7 @@ typedef enum Mode {
     MODE_NORMAL,
     MODE_INSERT,
     MODE_INSERT_BEGIN, // The first insert.
+    MODE_LEAP,
 } Mode;
 
 Mode mode = MODE_NORMAL;
@@ -128,11 +129,16 @@ void cursor_move(Cursor_Movement m) {
     }
 }
 
-b32 is_word_character(u8 c) {
-    return c != ' ' && c != '\t' && 
-        ((c >= 'a' && c <= 'z') ||
-         (c >= 'A' && c <= 'Z') ||
-         (c >= '0' && c <= '9'));
+b32 is_alpha_numberic(u8 c) {
+    return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'));
+}
+
+b32 is_punctuation(u8 c) {
+    return (c >= '!' && c <= '/') || (c >= ':' && c <= '@') || (c >= '[' && c <= '`') || (c >= '{' && c <= '~');
+}
+
+b32 is_whitespace(u8 c) {
+    return c == ' ' || c == '\t' || c == '\n';
 }
 
 void update_cursor_position_from_index(usize index) {
@@ -154,13 +160,45 @@ void update_cursor_position_from_index(usize index) {
 
 void move_cursor_to_next_word() {
     usize index = cursor_index();
+    u8 *buf = text_buffers[current_text_buffer];
 
-    while (index < current_buffer_len && is_word_character(text_buffers[current_text_buffer][index])) {
+    if (is_alpha_numberic(buf[index])) {
+        while (index < current_buffer_len && is_alpha_numberic(buf[index])) {
+            index += 1;
+        }
+    } else if (is_punctuation(buf[index])) {
+        while (index < current_buffer_len && is_punctuation(buf[index])) {
+            index += 1;
+        }
+    }
+
+    while (index < current_buffer_len && is_whitespace(buf[index])) {
         index += 1;
     }
 
-    while (index < current_buffer_len && !is_word_character(text_buffers[current_text_buffer][index])) {
-        index += 1;
+    update_cursor_position_from_index(index);
+}
+
+void move_cursor_to_previous_word() {
+    usize index = cursor_index();
+    u8 *buf = text_buffers[current_text_buffer];
+
+    if (index > 0) {
+        index -= 1;
+
+        while (index > 0 && is_whitespace(buf[index])) {
+            index -= 1;
+        }
+
+        if (is_alpha_numberic(buf[index])) {
+            while (index > 0 && is_alpha_numberic(buf[index - 1])) {
+                index -= 1;
+            }
+        } else if (is_punctuation(buf[index])) {
+            while (index > 0 && is_punctuation(buf[index - 1])) {
+                index -= 1;
+            }
+        }
     }
 
     update_cursor_position_from_index(index);
@@ -461,6 +499,9 @@ int main(int argc, char *argv[]) {
                         break;
                     case SDLK_w:
                         move_cursor_to_next_word();
+                        break;
+                    case SDLK_b:
+                        move_cursor_to_previous_word();
                         break;
                     case SDLK_i:
                         mode = MODE_INSERT_BEGIN;
