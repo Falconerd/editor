@@ -263,6 +263,27 @@ void draw_text(v3 p, s8 s, v4 c) {
     }
 }
 
+void draw_leap_text(v3 p, s8 s, v4 color, v4 hl_color, u8 hl_ch) {
+    f32 x = p.x;
+    f32 y = p.y;
+    texture t = draw_font_texture;
+    for (int i = 0; i < s.len; i += 1) {
+        v3 pos = {x, y, p.z};
+        v2 size = {t.frame_width, t.frame_height};
+        // draw_rect(pos, size, 0, (v4){0, 0.11f, 0.11f, 1}, 0);
+        v4 _color = color;
+        if (s.data[i] == hl_ch) {
+            _color = hl_color;
+        }
+        draw_rect_subtexture(pos, (v2){t.frame_width, t.frame_height}, _color, t, (int)s.data[i] - '!', 0);
+        x += t.frame_width;
+        if (s.data[i] == '\n') {
+            y += t.frame_height;
+            x = p.x;
+        }
+    }
+}
+
 void draw_rope(rope_node *n, v3 *p, v4 c, f32 initial_x) {
     if (!n) {
         return;
