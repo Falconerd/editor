@@ -368,6 +368,8 @@ void draw_frame(void) {
     char *mode_text = "NORMAL";
     if (mode == MODE_INSERT) {
         mode_text = "INSERT";
+    } else if (mode == MODE_LEAP) {
+        mode_text = "LEAP";
     }
     sprintf(buf, "%zu:%zu %zuLC, %zuLL, %zu, %s", cursor_line, cursor_col, line_count, line_lengths[cursor_line], cursor_index(), mode_text);
     draw_text((v3){0, 0, 0}, s8(buf), COLOR_WHITE);
@@ -449,6 +451,8 @@ int main(int argc, char *argv[]) {
         draw_frame();
 
         while (SDL_WaitEvent(&event) && app_should_run) {
+            // TODO: Clean up.
+            // - probably have modal keybinds instead of keydown events that check the mode.
             switch (event.type) {
             case SDL_QUIT:
                 app_should_run = 0;
@@ -466,24 +470,41 @@ int main(int argc, char *argv[]) {
                     ctrl_q_pressed = 0;
                 }
                 break;
-            case SDL_KEYDOWN:
-                if (event.key.keysym.sym == SDLK_q && (event.key.keysym.mod & KMOD_CTRL) > 0) {
-                    if (ctrl_q_pressed) {
-                        app_should_run = 0;
-                    } else {
-                        ctrl_q_pressed = 1;
-                    }
-                    break;
-                }
-                if (mode == MODE_INSERT) {
-                    if (event.key.keysym.sym == SDLK_ESCAPE) {
+            case SDL_KEYDOWN: {
+                switch (mode) {
+                case MODE_INSERT_BEGIN: {
+
+                } break;
+                case MODE_INSERT: {
+                    switch (event.key.keysym.sym) {
+                    case SDLK_ESCAPE: {
                         mode = MODE_NORMAL;
-                    } else if (event.key.keysym.sym == SDLK_BACKSPACE) {
+                    } break;
+                    case SDLK_BACKSPACE: {
                         delete(cursor_index());
-                    } else if (event.key.keysym.sym == SDLK_RETURN) {
+                    } break;
+                    case SDLK_RETURN: {
                         linebreak(cursor_index());
+                    } break;
                     }
-                } else {
+                } break;
+                case MODE_NORMAL: {
+                    // Quit.
+                    if (event.key.keysym.sym == SDLK_q && (event.key.keysym.mod & KMOD_CTRL) > 0) {
+                        if (ctrl_q_pressed) {
+                            app_should_run = 0;
+                        } else {
+                            ctrl_q_pressed = 1;
+                        }
+                        break;
+                    }
+
+                    // Leap.
+                    if (event.key.keysym.sym == SDLK_SPACE && (event.key.keysym.mod & KMOD_CTRL) > 0) {
+                        mode = MODE_LEAP;
+                        break;
+                    }
+
                     switch (event.key.keysym.sym) {
                     case SDLK_h:
                         cursor_move(CURSOR_MOVEMENT_LEFT);
@@ -513,8 +534,11 @@ int main(int argc, char *argv[]) {
                         root_node = ts_tree_root_node(tree);
                         break;
                     }
+                } break;
+                case MODE_LEAP: {
+                } break;
                 }
-                break;
+            } break;
             }
 
             draw_frame();
