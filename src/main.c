@@ -21,6 +21,8 @@
 #include "draw.c"
 
 // TODO: Put somewhere?
+u8 leap_chars[3] = {0};
+u8 leap_chars_count = 0;
 b32 ctrl_q_pressed = 0;
 v3 PADDING = {4, 36, 0};
 TSParser *parser = 0;
@@ -45,6 +47,7 @@ window_handle window;
 
 #define TEXT_BUFFER_COUNT 10
 u8 *text_buffers[TEXT_BUFFER_COUNT] = {0};
+u8 *leap_buffer = 0;
 usize used_text_buffers = 0; // Undo steps, can't be greater than TEXT_BUFFER_COUNT
 usize current_text_buffer = 0;
 usize current_buffer_len = 0;
@@ -232,6 +235,12 @@ void update_tree() {
     root_node = ts_tree_root_node(tree);
 }
 
+void update_leap_buffer() {
+    for (usize i = 0; i < current_buffer_len; i += 1) {
+        leap_buffer[i] = text_buffers[current_text_buffer][i];
+    }
+}
+
 void insert(u8 c, usize index) {
     // Don't insert 'i'
     if (mode == MODE_INSERT_BEGIN) {
@@ -251,6 +260,7 @@ void insert(u8 c, usize index) {
     cursor_col += 1;
     line_lengths[cursor_line] += 1;
 
+    update_leap_buffer();
     update_tree();
 }
 
@@ -274,6 +284,7 @@ void delete(usize index) {
         cursor_col -= 1;
         line_lengths[cursor_line] -= 1;
     }
+    update_leap_buffer();
     update_tree();
 }
 
@@ -286,6 +297,7 @@ void linebreak(usize index) {
     // Move down 1 line.
     cursor_line += 1;
     cursor_col = 1;
+    update_leap_buffer();
     update_tree();
 }
 
@@ -322,21 +334,34 @@ void draw_syntax_highlighted_text(TSNode n) {
         0
     };
 
+    v4 color_normal = {0.8f, 0.8f, 0.8f, 1};
+    v4 color_type = {89.f / 255.f, 194.f / 255.f, 255.f / 255.f, 1.f};
+    v4 color_ident = {230.f / 255.f, 180.f / 255.f, 80.f / 255.f, 1.f};
+    v4 color_keyword = {255.f / 255.f, 143.f / 255.f, 64.f / 255.f, 1.f};
+    v4 color_lit = {210.f / 255.f, 166.f / 255.f, 255.f / 255.f, 1.f};
+
     switch (symbol) {
     case 1: // identifier
-        draw_text(text_pos, node_string, (v4){1, 1, 0, 1});
+        draw_text(text_pos, node_string, color_ident);
         break;
     case 89: // primitive_type
-        draw_text(text_pos, node_string, (v4){1, 0, 0, 1});
+        draw_text(text_pos, node_string, color_type);
         break;
     case 102: // return
-        draw_text(text_pos, node_string, (v4){0, 0, 1, 1});
+        draw_text(text_pos, node_string, color_keyword);
         break;
     case 135: // number_literal
-        draw_text(text_pos, node_string, (v4){0, 1, 0, 1});
+        draw_text(text_pos, node_string, color_lit);
         break;
     case 155: // translation unit
         // printf("======================\n");
+        break;
+    case 5:
+    case 8:
+    case 42:
+    case 63:
+    case 64:
+        draw_text(text_pos, node_string, color_normal);
         break;
     default:
         break;
@@ -357,12 +382,22 @@ void draw_frame(void) {
     draw_begin();
 
     // Text
-    draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){1, 1, 1, 1});
-    draw_syntax_highlighted_text(root_node);
-    // Cursor
+    // draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){1, 1, 1, 1});
 
+    if (mode == MODE_LEAP) {
+        draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){0.2, 0.2, 0.2, 1});
+    } else {
+        draw_syntax_highlighted_text(root_node);
+    }
+    
+    // Cursor
     v2 cursor_size = {draw_font_texture.frame_width, draw_font_texture.frame_height};
-    draw_rect(cursor_pos, cursor_size, 0, (v4){1, 1, 1, 1}, 0);
+    draw_rect(cursor_pos, cursor_size, 0, (v4){1, 0.5f, 0.2f, 1}, 0);
+    // Cursor text.
+    // NOTE: Later this will be a range.
+    char cursor_char[1] = {char_at_cursor()};
+    draw_text(cursor_pos, (s8){cursor_char, 1}, (v4){0, 0, 0, 1});
+    
     // Status line
     char buf[255] = {0};
     char *mode_text = "NORMAL";
@@ -375,6 +410,38 @@ void draw_frame(void) {
     draw_text((v3){0, 0, 0}, s8(buf), COLOR_WHITE);
 
     draw_end();
+}
+
+u8 leap_labels[] = {'a', 'r', 's', 't', 'd',
+                    'h', 'n', 'e', 'i', 'o',
+                    'q', 'w', 'f', 'p', 'g',
+                    'j', 'l', 'u', 'y',
+                    'z', 'x', 'c', 'v', 'b',
+                    'k','m'
+};
+
+void assign_label_to_occurence() {}
+void add_to_leap_target() {}
+
+void find_and_label_occurrences(u8 c) {
+    int label_index = 0;
+
+    u8 *buf = text_buffers[current_buffer_len];
+    for (usize i = 0; i < current_buffer_len; i += 1) {
+        if (buf[i] == c) {
+            assign_label_to_occurence(i, leap_labels[label_index]);
+            label_index = (label_index + 1) % (sizeof(leap_labels) / sizeof(leap_labels[0]));
+        }
+    }
+}
+
+void perform_leap_search() {
+    u8 *buf = text_buffers[current_text_buffer];
+    for (usize i = 0; i < current_buffer_len - 1; i += 1) {
+        if (buf[i] == leap_chars[0] && buf[i + 1] == leap_chars[1]) {
+            add_to_leap_target(i);
+        }
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -390,6 +457,16 @@ int main(int argc, char *argv[]) {
             panic("Unable to allocate space for buffer.");
         }
         text_buffers[i] = buf;
+    }
+
+    // Init leap buffer.
+    // Only has to be large enough to fit 1 screen of stuff...
+    {
+        u8 *buf = (u8 *)arena_alloc(&arena_permanent, 2048);
+        if (!buf) {
+            panic("");
+        }
+        leap_buffer = buf;
     }
 
     parser = ts_parser_new();
@@ -436,8 +513,10 @@ int main(int argc, char *argv[]) {
     // Copy data into the first text buffer
     for (usize i = 0; i < fr.str.len; i += 1) {
         text_buffers[0][i] = fr.str.data[i];
+        leap_buffer[i] = fr.str.data[i];
         // FIXME: Hack to just have a 0 at the end.
         text_buffers[0][i + 1] = 0;
+        leap_buffer[i + 1] = 0;
     }
     current_buffer_len = fr.str.len;
 
@@ -506,18 +585,26 @@ int main(int argc, char *argv[]) {
                     }
 
                     switch (event.key.keysym.sym) {
-                    case SDLK_h:
-                        cursor_move(CURSOR_MOVEMENT_LEFT);
-                        break;
-                    case SDLK_l:
-                        cursor_move(CURSOR_MOVEMENT_RIGHT);
-                        break;
-                    case SDLK_j:
-                        cursor_move(CURSOR_MOVEMENT_DOWN);
-                        break;
-                    case SDLK_k:
-                        cursor_move(CURSOR_MOVEMENT_UP);
-                        break;
+                    /*
+                        NOTE: Rethinking movement.
+                            Perhaps the idea of a single char/line move
+                        is not even required.
+                            It'll take 1 extra key-press to move 1 char
+                        but, since most movements are more than 1, it
+                        should be a net saving.
+                    */
+                    // case SDLK_h:
+                    //     cursor_move(CURSOR_MOVEMENT_LEFT);
+                    //     break;
+                    // case SDLK_l:
+                    //     cursor_move(CURSOR_MOVEMENT_RIGHT);
+                    //     break;
+                    // case SDLK_j:
+                    //     cursor_move(CURSOR_MOVEMENT_DOWN);
+                    //     break;
+                    // case SDLK_k:
+                    //     cursor_move(CURSOR_MOVEMENT_UP);
+                    //     break;
                     case SDLK_w:
                         move_cursor_to_next_word();
                         break;
@@ -536,6 +623,19 @@ int main(int argc, char *argv[]) {
                     }
                 } break;
                 case MODE_LEAP: {
+                    // if (leap_char_count < 2) {
+                    //     leap_chars[leap_char_count] = event.key.keysym.sym;
+                    //     leap_char_count += 1;
+                    //     if (leap_char_count == 2) {
+                    //         mode = MODE_NORMAL;
+                    //         perform_leap_search();
+                    //     }
+                    // }
+                    switch (event.key.keysym.sym) {
+                    case SDLK_ESCAPE: {
+                        mode = MODE_NORMAL;
+                    } break;
+                    }
                 } break;
                 }
             } break;

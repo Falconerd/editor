@@ -253,7 +253,7 @@ void draw_text(v3 p, s8 s, v4 c) {
     for (int i = 0; i < s.len; i += 1) {
         v3 pos = {x, y, p.z};
         v2 size = {t.frame_width, t.frame_height};
-        draw_rect(pos, size, 0, (v4){0, 0, 0, 1}, 0);
+        // draw_rect(pos, size, 0, (v4){0, 0.11f, 0.11f, 1}, 0);
         draw_rect_subtexture(pos, (v2){t.frame_width, t.frame_height}, c, t, (int)s.data[i] - '!', 0);
         x += t.frame_width;
         if (s.data[i] == '\n') {
