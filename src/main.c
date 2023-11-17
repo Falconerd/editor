@@ -344,93 +344,93 @@ void draw_syntax_highlighted_text(TSNode n) {
     v4 color_comment = {0, 219.f / 255.f, 0, 1};
 
     switch (symbol) {
-        case 1: // identifier
-            draw_text(text_pos, node_string, color_ident);
-            break;
-        case 89: // primitive_type
-            draw_text(text_pos, node_string, color_type);
-            break;
-        case 102: // return
-        case 44: // typedef
-        case 94: // if
-        case 95: // else
-        case 96: // switch
-        case 97: // case
-        case 98: // default
-        case 99: // while
-        case 100: // do
-        case 101: // for
-        case 103: // break
-        case 104: // continue
-        case 105: // goto
-            draw_text(text_pos, node_string, color_keyword);
-            break;
-        case 135: // number_literal
-        case 293: // char_literal
-        case 294: // concatenated_string
-        case 295: // string_literal
-            draw_text(text_pos, node_string, color_lit);
-            break;
-        case 154: // comment
-            draw_text(text_pos, node_string, color_normal);
-            break;
-        case 63: // LBRACE
-        case 64: // RBRACE
-        case 69: // LBRACK
-        case 70: // RBRACK
-        case 5:  // LPAREN
-        case 8:  // RPAREN
-        case 26: // STAR
-        case 27: // SLASH
-        case 28: // PERCENT
-        case 25: // PLUS
-        case 24: // DASH
-        case 22: // BANG
-        case 23: // TILDE
-        case 29: // PIPE_PIPE
-        case 30: // AMP_AMP
-        case 31: // PIPE
-        case 32: // CARET
-        case 33: // AMP
-        case 34: // EQ_EQ
-        case 35: // BANG_EQ
-        case 36: // GT
-        case 37: // GT_EQ
-        case 38: // LT_EQ
-        case 39: // LT
-        case 40: // LT_LT
-        case 41: // GT_GT
-        case 42: // SEMI
-        case 91: // COLON
-        case 133: // DOT
-        case 134: // DASH_GT
-        case 71: // EQ
-        case 110: // QMARK
-        case 111: // STAR_EQ
-        case 112: // SLASH_EQ
-        case 113: // PERCENT_EQ
-        case 114: // PLUS_EQ
-        case 115: // DASH_EQ
-        case 116: // LT_LT_EQ
-        case 117: // GT_GT_EQ
-        case 118: // AMP_EQ
-        case 119: // CARET_EQ
-        case 120: // PIPE_EQ
-        case 121: // DASH_DASH
-        case 122: // PLUS_PLUS
-        case 156: // INCLUDE
-        case 157: // DEFINE
-        case 66: // UNSIGNED
-        case 81: // CONST
-        case 92: // STRUCT
-        case 330: // STRUCT FIELD
-        case 332: // TYPEDEF IDENT
-            draw_text(text_pos, node_string, color_normal);
-            break;
-        default:
-            // printf("symbol not covered: %d (%s)\n", symbol, node_string.data);
-            // draw_text(text_pos, node_string, (v4){1, 0, 0, 1});
-            break;
+    case 1: // identifier
+        draw_text(text_pos, node_string, color_ident);
+        break;
+    case 89: // primitive_type
+        draw_text(text_pos, node_string, color_type);
+        break;
+    case 102: // return
+    case 44: // typedef
+    case 94: // if
+    case 95: // else
+    case 96: // switch
+    case 97: // case
+    case 98: // default
+    case 99: // while
+    case 100: // do
+    case 101: // for
+    case 103: // break
+    case 104: // continue
+    case 105: // goto
+        draw_text(text_pos, node_string, color_keyword);
+        break;
+    case 135: // number_literal
+    case 293: // char_literal
+    case 294: // concatenated_string
+    case 295: // string_literal
+        draw_text(text_pos, node_string, color_lit);
+        break;
+    case 154: // comment
+        draw_text(text_pos, node_string, color_normal);
+        break;
+    case 63: // LBRACE
+    case 64: // RBRACE
+    case 69: // LBRACK
+    case 70: // RBRACK
+    case 5:  // LPAREN
+    case 8:  // RPAREN
+    case 26: // STAR
+    case 27: // SLASH
+    case 28: // PERCENT
+    case 25: // PLUS
+    case 24: // DASH
+    case 22: // BANG
+    case 23: // TILDE
+    case 29: // PIPE_PIPE
+    case 30: // AMP_AMP
+    case 31: // PIPE
+    case 32: // CARET
+    case 33: // AMP
+    case 34: // EQ_EQ
+    case 35: // BANG_EQ
+    case 36: // GT
+    case 37: // GT_EQ
+    case 38: // LT_EQ
+    case 39: // LT
+    case 40: // LT_LT
+    case 41: // GT_GT
+    case 42: // SEMI
+    case 91: // COLON
+    case 133: // DOT
+    case 134: // DASH_GT
+    case 71: // EQ
+    case 110: // QMARK
+    case 111: // STAR_EQ
+    case 112: // SLASH_EQ
+    case 113: // PERCENT_EQ
+    case 114: // PLUS_EQ
+    case 115: // DASH_EQ
+    case 116: // LT_LT_EQ
+    case 117: // GT_GT_EQ
+    case 118: // AMP_EQ
+    case 119: // CARET_EQ
+    case 120: // PIPE_EQ
+    case 121: // DASH_DASH
+    case 122: // PLUS_PLUS
+    case 156: // INCLUDE
+    case 157: // DEFINE
+    case 66: // UNSIGNED
+    case 81: // CONST
+    case 92: // STRUCT
+    case 330: // STRUCT FIELD
+    case 332: // TYPEDEF IDENT
+        draw_text(text_pos, node_string, color_normal);
+        break;
+    default:
+        // printf("symbol not covered: %d (%s)\n", symbol, node_string.data);
+        // draw_text(text_pos, node_string, (v4){1, 0, 0, 1});
+        break;
     }
 
     u32 child_count = ts_node_child_count(n);
@@ -621,8 +621,6 @@ int main(int argc, char *argv[]) {
 
     SDL_Event event;
     while (app_should_run) {
-        draw_frame();
-
         while (SDL_WaitEvent(&event) && app_should_run) {
             // TODO: Clean up.
             // - probably have modal keybinds instead of keydown events that check the mode.
