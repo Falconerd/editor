@@ -34,7 +34,8 @@ typedef enum Mode {
     MODE_NORMAL,
     MODE_INSERT,
     MODE_INSERT_BEGIN, // The first insert.
-    MODE_LEAP,
+    MODE_LEAP_1, // Waiting for 1st input
+    MODE_LEAP_2, // Waiting for 2nd input
 } Mode;
 
 Mode mode = MODE_NORMAL;
@@ -385,8 +386,11 @@ void draw_frame(void) {
     // Text
     // draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){1, 1, 1, 1});
 
-    if (mode == MODE_LEAP) {
+    if (mode == MODE_LEAP_1) {
         draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){0.2, 0.2, 0.2, 1});
+    } else if (mode == MODE_LEAP_2) {
+        draw_text(PADDING, (s8){leap_buffer, current_buffer_len}, (v4){1, 0.2, 0.2, 1});
+        // draw_leap_text(PADDING, (s8){leap_buffer, current_buffer_len}, (v4){0.2, 0.2, 0.2, 1}, (v4){0, 0.8, 0, 1}, leap_chars[0]);
     } else {
         draw_syntax_highlighted_text(root_node);
     }
@@ -404,7 +408,7 @@ void draw_frame(void) {
     char *mode_text = "NORMAL";
     if (mode == MODE_INSERT) {
         mode_text = "INSERT";
-    } else if (mode == MODE_LEAP) {
+    } else if (mode == MODE_LEAP_1 || mode == MODE_LEAP_2) {
         mode_text = "LEAP";
     }
     sprintf(buf, "%zu:%zu %zuLC, %zuLL, %zu, %s", cursor_line, cursor_col, line_count, line_lengths[cursor_line], cursor_index(), mode_text);
@@ -421,29 +425,23 @@ u8 leap_labels[] = {'a', 'r', 's', 't', 'd',
                     'k','m'
 };
 
-void assign_label_to_occurence() {}
-void add_to_leap_target() {}
-
-void find_and_label_occurrences(u8 c) {
-    int label_index = 0;
-
-    u8 *buf = text_buffers[current_buffer_len];
-    for (usize i = 0; i < current_buffer_len; i += 1) {
-        if (buf[i] == c) {
-            assign_label_to_occurence(i, leap_labels[label_index]);
-            label_index = (label_index + 1) % (sizeof(leap_labels) / sizeof(leap_labels[0]));
-        }
-    }
-}
-
-void perform_leap_search() {
+void assign_leap_labels(u8 fc) {
+    usize li = 0;
     u8 *buf = text_buffers[current_text_buffer];
-    for (usize i = 0; i < current_buffer_len - 1; i += 1) {
-        if (buf[i] == leap_chars[0] && buf[i + 1] == leap_chars[1]) {
-            add_to_leap_target(i);
+    for (usize i = 0; i < current_buffer_len; i += 1) {
+        if (buf[i] == fc) {
+            leap_buffer[i] = leap_labels[li];
+            li = (li + 1) % sizeof(leap_labels);
+            if (leap_labels[li] == fc) {
+                li = (li + 1) % sizeof(leap_labels);
+            }
+        } else {
+            leap_buffer[i] = buf[i];
         }
     }
 }
+
+void leap() {}
 
 int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -581,7 +579,7 @@ int main(int argc, char *argv[]) {
 
                     // Leap.
                     if (event.key.keysym.sym == SDLK_SPACE && (event.key.keysym.mod & KMOD_CTRL) > 0) {
-                        mode = MODE_LEAP;
+                        mode = MODE_LEAP_1;
                         break;
                     }
 
@@ -623,19 +621,31 @@ int main(int argc, char *argv[]) {
                         break;
                     }
                 } break;
-                case MODE_LEAP: {
-                    // if (leap_char_count < 2) {
-                    //     leap_chars[leap_char_count] = event.key.keysym.sym;
-                    //     leap_char_count += 1;
-                    //     if (leap_char_count == 2) {
-                    //         mode = MODE_NORMAL;
-                    //         perform_leap_search();
-                    //     }
-                    // }
-                    switch (event.key.keysym.sym) {
-                    case SDLK_ESCAPE: {
+                case MODE_LEAP_1: {
+                    if (event.key.keysym.sym == SDLK_ESCAPE) {
                         mode = MODE_NORMAL;
-                    } break;
+                        leap_chars_count = 0;
+                        break;
+                    }
+                    if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z) {
+                        leap_chars[0] = event.key.keysym.sym;
+                        leap_chars_count = 1;
+                        mode = MODE_LEAP_2;
+                        assign_leap_labels(leap_chars[0]);
+                        break;
+                    }
+                } break;
+                case MODE_LEAP_2: {
+                    if (event.key.keysym.sym == SDLK_ESCAPE) {
+                        mode = MODE_NORMAL;
+                        leap_chars_count = 0;
+                        break;
+                    }
+                    if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z) {
+                        leap_chars[1] = event.key.keysym.sym;
+                        leap_chars_count = 2;
+                        leap();
+                        break;
                     }
                 } break;
                 }
