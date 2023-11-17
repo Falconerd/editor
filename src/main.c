@@ -19,7 +19,7 @@
 #include "string.c"
 #include "os.c"
 #include "draw.c"
-#include "fuzzy.c"
+// #include "fuzzy.c"
 
 // TODO: Put somewhere?
 u8 leap_chars[3] = {0};
@@ -337,36 +337,100 @@ void draw_syntax_highlighted_text(TSNode n) {
     };
 
     v4 color_normal = {0.8f, 0.8f, 0.8f, 1};
-    v4 color_type = {89.f / 255.f, 194.f / 255.f, 255.f / 255.f, 1.f};
-    v4 color_ident = {230.f / 255.f, 180.f / 255.f, 80.f / 255.f, 1.f};
-    v4 color_keyword = {255.f / 255.f, 143.f / 255.f, 64.f / 255.f, 1.f};
-    v4 color_lit = {210.f / 255.f, 166.f / 255.f, 255.f / 255.f, 1.f};
+    v4 color_type = {89.f / 255.f, 194.f / 255.f, 255.f / 255.f, 1};
+    v4 color_ident = {230.f / 255.f, 180.f / 255.f, 80.f / 255.f, 1};
+    v4 color_keyword = {255.f / 255.f, 143.f / 255.f, 64.f / 255.f, 1};
+    v4 color_lit = {210.f / 255.f, 166.f / 255.f, 255.f / 255.f, 1};
+    v4 color_comment = {0, 219.f / 255.f, 0, 1};
 
     switch (symbol) {
-    case 1: // identifier
-        draw_text(text_pos, node_string, color_ident);
-        break;
-    case 89: // primitive_type
-        draw_text(text_pos, node_string, color_type);
-        break;
-    case 102: // return
-        draw_text(text_pos, node_string, color_keyword);
-        break;
-    case 135: // number_literal
-        draw_text(text_pos, node_string, color_lit);
-        break;
-    case 155: // translation unit
-        // printf("======================\n");
-        break;
-    case 5:
-    case 8:
-    case 42:
-    case 63:
-    case 64:
-        draw_text(text_pos, node_string, color_normal);
-        break;
-    default:
-        break;
+        case 1: // identifier
+            draw_text(text_pos, node_string, color_ident);
+            break;
+        case 89: // primitive_type
+            draw_text(text_pos, node_string, color_type);
+            break;
+        case 102: // return
+        case 44: // typedef
+        case 94: // if
+        case 95: // else
+        case 96: // switch
+        case 97: // case
+        case 98: // default
+        case 99: // while
+        case 100: // do
+        case 101: // for
+        case 103: // break
+        case 104: // continue
+        case 105: // goto
+            draw_text(text_pos, node_string, color_keyword);
+            break;
+        case 135: // number_literal
+        case 293: // char_literal
+        case 294: // concatenated_string
+        case 295: // string_literal
+            draw_text(text_pos, node_string, color_lit);
+            break;
+        case 154: // comment
+            draw_text(text_pos, node_string, color_normal);
+            break;
+        case 63: // LBRACE
+        case 64: // RBRACE
+        case 69: // LBRACK
+        case 70: // RBRACK
+        case 5:  // LPAREN
+        case 8:  // RPAREN
+        case 26: // STAR
+        case 27: // SLASH
+        case 28: // PERCENT
+        case 25: // PLUS
+        case 24: // DASH
+        case 22: // BANG
+        case 23: // TILDE
+        case 29: // PIPE_PIPE
+        case 30: // AMP_AMP
+        case 31: // PIPE
+        case 32: // CARET
+        case 33: // AMP
+        case 34: // EQ_EQ
+        case 35: // BANG_EQ
+        case 36: // GT
+        case 37: // GT_EQ
+        case 38: // LT_EQ
+        case 39: // LT
+        case 40: // LT_LT
+        case 41: // GT_GT
+        case 42: // SEMI
+        case 91: // COLON
+        case 133: // DOT
+        case 134: // DASH_GT
+        case 71: // EQ
+        case 110: // QMARK
+        case 111: // STAR_EQ
+        case 112: // SLASH_EQ
+        case 113: // PERCENT_EQ
+        case 114: // PLUS_EQ
+        case 115: // DASH_EQ
+        case 116: // LT_LT_EQ
+        case 117: // GT_GT_EQ
+        case 118: // AMP_EQ
+        case 119: // CARET_EQ
+        case 120: // PIPE_EQ
+        case 121: // DASH_DASH
+        case 122: // PLUS_PLUS
+        case 156: // INCLUDE
+        case 157: // DEFINE
+        case 66: // UNSIGNED
+        case 81: // CONST
+        case 92: // STRUCT
+        case 330: // STRUCT FIELD
+        case 332: // TYPEDEF IDENT
+            draw_text(text_pos, node_string, color_normal);
+            break;
+        default:
+            // printf("symbol not covered: %d (%s)\n", symbol, node_string.data);
+            // draw_text(text_pos, node_string, (v4){1, 0, 0, 1});
+            break;
     }
 
     u32 child_count = ts_node_child_count(n);
@@ -389,9 +453,10 @@ void draw_frame(void) {
     if (mode == MODE_LEAP_1) {
         draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){0.2, 0.2, 0.2, 1});
     } else if (mode == MODE_LEAP_2) {
+        draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){0.2, 0.2, 0.2, 1});
         draw_text(PADDING, (s8){leap_buffer, current_buffer_len}, (v4){1, 0.2, 0.2, 1});
-        // draw_leap_text(PADDING, (s8){leap_buffer, current_buffer_len}, (v4){0.2, 0.2, 0.2, 1}, (v4){0, 0.8, 0, 1}, leap_chars[0]);
     } else {
+        draw_text(PADDING, (s8){text_buffers[current_text_buffer], current_buffer_len}, (v4){0.2, 0.2, 0.2, 1});
         draw_syntax_highlighted_text(root_node);
     }
     
@@ -417,12 +482,19 @@ void draw_frame(void) {
     draw_end();
 }
 
-u8 leap_labels[] = {'a', 'r', 's', 't', 'd',
+u8 leap_labels[] = {
+                    'a', 'r', 's', 't', 'd',
                     'h', 'n', 'e', 'i', 'o',
                     'q', 'w', 'f', 'p', 'g',
                     'j', 'l', 'u', 'y',
                     'z', 'x', 'c', 'v', 'b',
-                    'k','m'
+                    'k', 'm',
+                    'A', 'R', 'S', 'T', 'D',
+                    'H', 'N', 'E', 'I', 'O',
+                    'Q', 'W', 'F', 'P', 'G',
+                    'J', 'L', 'U', 'Y',
+                    'Z', 'X', 'C', 'V', 'B',
+                    'K', 'M',
 };
 
 void assign_leap_labels(u8 fc) {
@@ -435,13 +507,36 @@ void assign_leap_labels(u8 fc) {
             if (leap_labels[li] == fc) {
                 li = (li + 1) % sizeof(leap_labels);
             }
-        } else {
+        } else if (buf[i] == '\n' || buf[i] == 0) {
             leap_buffer[i] = buf[i];
+        } else {
+            leap_buffer[i] = ' ';
         }
     }
 }
 
-void leap() {}
+void leap() {
+    if (leap_chars[0] == leap_chars[1]) {
+        return;
+    }
+    mode = MODE_NORMAL;
+    // TODO: Make less inefficient.
+    u64 col = 1;
+    u64 line = 1;
+    for (usize i = 0; i < current_buffer_len; i += 1) {
+        if (leap_buffer[i] == leap_chars[1]) {
+            break;
+        }
+        col += 1;
+        if (leap_buffer[i] == '\n') {
+            line += 1;
+            col = 1;
+        }
+    }
+    
+    cursor_col = col;
+    cursor_line = line;
+}
 
 int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -537,8 +632,7 @@ int main(int argc, char *argv[]) {
                 break;
              case SDL_TEXTINPUT:
                 if (mode == MODE_INSERT || mode == MODE_INSERT_BEGIN) {
-                    // Here, event.text.text is the input text
-                    char c = event.text.text[0]; // If you just want the first character
+                    char c = event.text.text[0];
                     insert(c, cursor_index());
                     break;
                 }
@@ -578,7 +672,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     // Leap.
-                    if (event.key.keysym.sym == SDLK_SPACE && (event.key.keysym.mod & KMOD_CTRL) > 0) {
+                    if (event.key.keysym.sym == SDLK_l) {
                         mode = MODE_LEAP_1;
                         break;
                     }
@@ -591,19 +685,20 @@ int main(int argc, char *argv[]) {
                             It'll take 1 extra key-press to move 1 char
                         but, since most movements are more than 1, it
                         should be a net saving.
+
+                        case SDLK_h:
+                            cursor_move(CURSOR_MOVEMENT_LEFT);
+                            break;
+                        case SDLK_l:
+                            cursor_move(CURSOR_MOVEMENT_RIGHT);
+                            break;
+                        case SDLK_j:
+                            cursor_move(CURSOR_MOVEMENT_DOWN);
+                            break;
+                        case SDLK_k:
+                            cursor_move(CURSOR_MOVEMENT_UP);
+                            break;
                     */
-                    // case SDLK_h:
-                    //     cursor_move(CURSOR_MOVEMENT_LEFT);
-                    //     break;
-                    // case SDLK_l:
-                    //     cursor_move(CURSOR_MOVEMENT_RIGHT);
-                    //     break;
-                    // case SDLK_j:
-                    //     cursor_move(CURSOR_MOVEMENT_DOWN);
-                    //     break;
-                    // case SDLK_k:
-                    //     cursor_move(CURSOR_MOVEMENT_UP);
-                    //     break;
                     case SDLK_w:
                         move_cursor_to_next_word();
                         break;
@@ -622,13 +717,44 @@ int main(int argc, char *argv[]) {
                     }
                 } break;
                 case MODE_LEAP_1: {
-                    if (event.key.keysym.sym == SDLK_ESCAPE) {
+                    SDL_Keycode key = event.key.keysym.sym;
+                    SDL_Keymod mod = event.key.keysym.mod;
+
+                    if (key == SDLK_ESCAPE) {
                         mode = MODE_NORMAL;
                         leap_chars_count = 0;
                         break;
                     }
-                    if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z) {
-                        leap_chars[0] = event.key.keysym.sym;
+
+                    if ((key >= SDLK_a && key <= SDLK_z) ||
+                        (key >= SDLK_0 && key <= SDLK_9) ||
+                        key == SDLK_LEFTBRACKET ||
+                        key == SDLK_RIGHTBRACKET ||
+                        key == SDLK_SEMICOLON ||
+                        ((mod & KMOD_SHIFT) && ((key == SDLK_9) || (key == SDLK_0) || (key == SDLK_LEFTBRACKET) || (key == SDLK_RIGHTBRACKET)))) {
+
+                        if (mod & KMOD_SHIFT) {
+                            switch (key) {
+                                case SDLK_9:
+                                    leap_chars[0] = '(';
+                                    break;
+                                case SDLK_0:
+                                    leap_chars[0] = ')';
+                                    break;
+                                case SDLK_LEFTBRACKET:
+                                    leap_chars[0] = '{';
+                                    break;
+                                case SDLK_RIGHTBRACKET:
+                                    leap_chars[0] = '}';
+                                    break;
+                                case SDLK_SEMICOLON:
+                                    leap_chars[0] = ':';
+                                    break;
+                            }
+                        } else {
+                            leap_chars[0] = key;
+                        }
+
                         leap_chars_count = 1;
                         mode = MODE_LEAP_2;
                         assign_leap_labels(leap_chars[0]);
@@ -641,8 +767,42 @@ int main(int argc, char *argv[]) {
                         leap_chars_count = 0;
                         break;
                     }
-                    if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z) {
-                        leap_chars[1] = event.key.keysym.sym;
+                    SDL_Keycode key = event.key.keysym.sym;
+                    SDL_Keymod mod = event.key.keysym.mod;
+                    if ((key >= SDLK_a && key <= SDLK_z) ||
+                        (key >= SDLK_0 && key <= SDLK_9) ||
+                        key == SDLK_LEFTBRACKET ||
+                        key == SDLK_RIGHTBRACKET ||
+                        key == SDLK_SEMICOLON ||
+                        ((mod & KMOD_SHIFT) && ((key == SDLK_9) || (key == SDLK_0) || (key == SDLK_LEFTBRACKET) || (key == SDLK_RIGHTBRACKET)))) {
+
+                        if (mod & KMOD_SHIFT) {
+                            switch (key) {
+                                case SDLK_9:
+                                    leap_chars[1] = '(';
+                                    break;
+                                case SDLK_0:
+                                    leap_chars[1] = ')';
+                                    break;
+                                case SDLK_LEFTBRACKET:
+                                    leap_chars[1] = '{';
+                                    break;
+                                case SDLK_RIGHTBRACKET:
+                                    leap_chars[1] = '}';
+                                    break;
+                                case SDLK_SEMICOLON:
+                                    leap_chars[1] = ':';
+                                    break;
+                                default:
+                                    if (key >= SDLK_a && key <= SDLK_z) {
+                                        leap_chars[1] = toupper(key);
+                                    }
+                                    break;
+                            }
+                        } else {
+                            leap_chars[1] = key;
+                        }
+
                         leap_chars_count = 2;
                         leap();
                         break;

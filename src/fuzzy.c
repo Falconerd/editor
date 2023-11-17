@@ -54,6 +54,6 @@ i32 compute_score(i32 jump, b32 is_first, s8 match) {
         score += adjacency_bonus;
     }
     if (!is_first || jump > 0) {
-        if (isupper(match.data[0]) && islower(match))
+        if (isupper(match.data[0]) && islower(match)) {}
     }
 }
