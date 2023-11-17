@@ -178,6 +178,8 @@ struct rope_node {
     s8 str;
 };
 
+s8 string_case_insensitive_search(s8 s, s8 q);
+
 /* OS */
 
 typedef struct file_read_result {

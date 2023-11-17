@@ -30,3 +30,22 @@ usize string_count_until(s8 s, u8 ch) {
     }
     return c;
 }
+
+s8 string_case_insensitive_search(s8 s, s8 q) {
+    if (q.len > s.len) {
+        return (s8){0};
+    }
+
+    for (usize i = 0; i <= s.len - q.len; i += 1) {
+        usize j;
+        for (j = 0; j < q.len; j += 1) {
+            if (tolower(s.data[i + j]) != tolower(q.data[j])) {
+                break;
+            }
+        }
+        if (j == q.len) {
+            return (s8){&s.data[i], q.len};
+        }
+    }
+    return (s8){0};
+}

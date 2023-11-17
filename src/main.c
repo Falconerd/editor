@@ -19,6 +19,7 @@
 #include "string.c"
 #include "os.c"
 #include "draw.c"
+#include "fuzzy.c"
 
 // TODO: Put somewhere?
 u8 leap_chars[3] = {0};
